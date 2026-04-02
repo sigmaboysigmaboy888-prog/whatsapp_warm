@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>WhatsApp Warmer | Auto Chat System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0a1f0a;
+            background-image: radial-gradient(circle at 25% 40%, rgba(30, 70, 30, 0.4) 0%, #0a1a0a 100%);
+            min-height: 100vh;
+            color: #e8f5e8;
+        }
+
+        /* Neon glow effect */
+        .neon-glow {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            background: radial-gradient(circle at 50% 50%, rgba(80, 255, 80, 0.03) 0%, transparent 70%);
+            z-index: 0;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #90ff90, #40ff40, #00cc00);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 0 30px rgba(64, 255, 64, 0.3);
+            letter-spacing: -0.5px;
+        }
+
+        .header p {
+            color: #8bc48b;
+            margin-top: 8px;
+        }
+
+        /* Grid Layout */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        /* Cards */
+        .card {
+            background: rgba(10, 25, 10, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(64, 200, 64, 0.25);
+            border-radius: 28px;
+            padding: 24px;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: rgba(80, 255, 80, 0.5);
+            box-shadow: 0 8px 32px rgba(64, 255, 64, 0.1);
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid rgba(80, 255, 80, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-title .icon {
+            font-size: 1.5rem;
+        }
+
+        /* Input Groups */
+        .input-group {
+            margin-bottom: 18px;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: #a0d8a0;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        input, textarea, select {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(0, 20, 0, 0.7);
+            border: 1px solid rgba(64, 200, 64, 0.4);
+            border-radius: 18px;
+            color: #e8f5e8;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            font-family: 'Inter', monospace;
+        }
+
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: #40ff40;
+            box-shadow: 0 0 12px rgba(64, 255, 64, 0.2);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        /* Dynamic Text List */
+        .text-list {
+            margin-top: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .text-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            background: rgba(0, 30, 0, 0.5);
+            border-radius: 12px;
+            margin-bottom: 8px;
+            font-size: 0.8rem;
+        }
+
+        .text-item span {
+            flex: 1;
+            word-break: break-word;
+        }
+
+        .remove-text {
+            background: rgba(255, 80, 80, 0.2);
+            border: none;
+            color: #ff8888;
+            cursor: pointer;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            transition: all 0.2s;
+        }
+
+        .remove-text:hover {
+            background: rgba(255, 80, 80, 0.5);
+            color: white;
+        }
+
+        .btn-add {
+            background: rgba(64, 200, 64, 0.15);
+            border: 1px dashed rgba(64, 200, 64, 0.5);
+            padding: 8px 16px;
+            border-radius: 40px;
+            color: #80ff80;
+            cursor: pointer;
+            font-size: 0.8rem;
+            margin-top: 8px;
+            width: 100%;
+            transition: all 0.2s;
+        }
+
+        .btn-add:hover {
+            background: rgba(64, 200, 64, 0.3);
+            border-color: #40ff40;
+        }
+
+        /* Contact List */
+        .contact-list {
+            margin-top: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .contact-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            background: rgba(0, 30, 0, 0.5);
+            border-radius: 12px;
+            margin-bottom: 8px;
+        }
+
+        /* Neon Button */
+        .neon-btn {
+            width: 100%;
+            padding: 14px 24px;
+            background: linear-gradient(135deg, #2a8a2a, #1a6a1a, #0f4a0f);
+            border: none;
+            border-radius: 60px;
+            color: white;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            margin-top: 16px;
+        }
+
+        .neon-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .neon-btn:hover::before {
+            left: 100%;
+        }
+
+        .neon-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(64, 255, 64, 0.3);
+            background: linear-gradient(135deg, #3aaa3a, #2a8a2a, #1a6a1a);
+        }
+
+        .neon-btn:active {
+            transform: translateY(0);
+        }
+
+        .neon-btn-outline {
+            background: transparent;
+            border: 2px solid #40cc40;
+            color: #80ff80;
+        }
+
+        .neon-btn-outline:hover {
+            background: rgba(64, 200, 64, 0.1);
+            box-shadow: 0 0 20px rgba(64, 255, 64, 0.2);
+        }
+
+        /* QR Container */
+        .qr-container {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .qr-container img {
+            background: white;
+            padding: 12px;
+            border-radius: 24px;
+            max-width: 200px;
+        }
+
+        /* Stats */
+        .stats-card {
+            background: linear-gradient(135deg, rgba(30, 70, 30, 0.6), rgba(10, 30, 10, 0.8));
+            border-radius: 28px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .stats-number {
+            font-size: 3rem;
+            font-weight: 800;
+            color: #60ff60;
+        }
+
+        .stats-label {
+            font-size: 0.8rem;
+            color: #a0d8a0;
+        }
+
+        .history-log {
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 0.75rem;
+            font-family: monospace;
+        }
+
+        .history-item {
+            padding: 6px 0;
+            border-bottom: 1px solid rgba(64, 200, 64, 0.2);
+            color: #b8e8b8;
+        }
+
+        /* Status Badge */
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 40px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+        .status-connected {
+            background: rgba(64, 255, 64, 0.2);
+            color: #60ff60;
+            border: 1px solid #40ff40;
+        }
+
+        .status-disconnected {
+            background: rgba(255, 80, 80, 0.2);
+            color: #ff8888;
+            border: 1px solid #ff6060;
+        }
+
+        .status-warning {
+            background: rgba(255, 200, 64, 0.2);
+            color: #ffcc60;
+            border: 1px solid #ffcc40;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+            .header h1 {
+                font-size: 1.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="neon-glow"></div>
+<div class="container">
+    <div class="header">
+        <h1>✨ WHATSAPP WARMER ✨</h1>
+        <p>Multi Device | Smart Text Rotation | Auto Message Sender</p>
+    </div>
+
+    <div class="grid">
+        <!-- Connection Card -->
+        <div class="card">
+            <div class="card-title">
+                <span class="icon">📱</span>
+                <span>Device Connection</span>
+                <span id="connectionStatus" class="status-badge status-disconnected" style="margin-left: auto;">Disconnected</span>
+            </div>
+            <div class="qr-container" id="qrContainer">
+                <p style="color: #8bc48b; font-size: 0.8rem;">Click Connect to scan QR Code</p>
+                <button id="connectBtn" class="neon-btn" style="margin-top: 10px;">🔌 CONNECT WHATSAPP</button>
+                <button id="disconnectBtn" class="neon-btn neon-btn-outline" style="margin-top: 10px; display: none;">⛔ DISCONNECT</button>
+            </div>
+        </div>
+
+        <!-- Contacts Card -->
+        <div class="card">
+            <div class="card-title">
+                <span class="icon">👥</span>
+                <span>Target Contacts</span>
+            </div>
+            <div class="input-group">
+                <label>📞 Add Contact (with country code)</label>
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" id="contactInput" placeholder="+6281234567890">
+                    <button id="addContactBtn" class="btn-add" style="width: auto; padding: 8px 20px;">+ Add</button>
+                </div>
+            </div>
+            <div id="contactList" class="contact-list"></div>
+        </div>
+
+        <!-- Message Texts Card -->
+        <div class="card">
+            <div class="card-title">
+                <span class="icon">💬</span>
+                <span>Message Variations</span>
+            </div>
+            <div class="input-group">
+                <label>✏️ Add Message Text</label>
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" id="textInput" placeholder="Enter your message...">
+                    <button id="addTextBtn" class="btn-add" style="width: auto; padding: 8px 20px;">+ Add</button>
+                </div>
+            </div>
+            <div id="textList" class="text-list"></div>
+            <div class="input-group" style="margin-top: 12px;">
+                <label>🔄 Send Mode</label>
+                <select id="sendMode">
+                    <option value="sequential">Sequential (send all texts in order)</option>
+                    <option value="random">Random (pick random text each time)</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid">
+        <!-- Settings Card -->
+        <div class="card">
+            <div class="card-title">
+                <span class="icon">⚙️</span>
+                <span>Delay Settings</span>
+            </div>
+            <div class="input-group">
+                <label>⏱️ Min Delay (ms)</label>
+                <input type="number" id="delayMin" value="3000" step="500">
+            </div>
+            <div class="input-group">
+                <label>⏱️ Max Delay (ms)</label>
+                <input type="number" id="delayMax" value="7000" step="500">
+            </div>
+            <button id="startBtn" class="neon-btn">🚀 START WARMING</button>
+            <button id="stopBtn" class="neon-btn neon-btn-outline" style="display: none;">⏹️ STOP WARMING</button>
+        </div>
+
+        <!-- Statistics Card -->
+        <div class="card">
+            <div class="card-title">
+                <span class="icon">📊</span>
+                <span>Statistics</span>
+            </div>
+            <div class="stats-card" style="margin-bottom: 16px;">
+                <div class="stats-number" id="totalSent">0</div>
+                <div class="stats-label">Total Messages Sent</div>
+            </div>
+            <div class="input-group">
+                <label>📜 Recent Activity</label>
+                <div id="historyLog" class="history-log">
+                    <div class="history-item" style="color: #6a9a6a;">Waiting for messages...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Info Card -->
+        <div class="card">
+            <div class="card-title">
+                <span class="icon">ℹ️</span>
+                <span>How It Works</span>
+            </div>
+            <div style="font-size: 0.8rem; line-height: 1.6; color: #b8e8b8;">
+                <p>✅ 1. Connect WhatsApp via QR Code</p>
+                <p>✅ 2. Add target contacts (one per line)</p>
+                <p>✅ 3. Add message variations</p>
+                <p>✅ 4. Set delay between messages</p>
+                <p>✅ 5. Click START WARMING</p>
+                <p>💡 <strong>Smart Rotation:</strong> Sequential sends all texts to each contact. Random picks random text each time.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const socket = io();
+    let sessionId = 'warmer_' + Date.now();
+    let isConnected = false;
+    let isWarming = false;
+    let contacts = [];
+    let texts = [];
+
+    // DOM Elements
+    const connectBtn = document.getElementById('connectBtn');
+    const disconnectBtn = document.getElementById('disconnectBtn');
+    const startBtn = document.getElementById('startBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const qrContainer = document.getElementById('qrContainer');
+    const connectionStatus = document.getElementById('connectionStatus');
+    const totalSentSpan = document.getElementById('totalSent');
+    const historyLog = document.getElementById('historyLog');
+    const contactInput = document.getElementById('contactInput');
+    const addContactBtn = document.getElementById('addContactBtn');
+    const contactList = document.getElementById('contactList');
+    const textInput = document.getElementById('textInput');
+    const addTextBtn = document.getElementById('addTextBtn');
+    const textList = document.getElementById('textList');
+    const delayMin = document.getElementById('delayMin');
+    const delayMax = document.getElementById('delayMax');
+    const sendMode = document.getElementById('sendMode');
+
+    // Load saved data
+    if (localStorage.getItem('warmer_contacts')) {
+        contacts = JSON.parse(localStorage.getItem('warmer_contacts'));
+        renderContacts();
+    }
+    if (localStorage.getItem('warmer_texts')) {
+        texts = JSON.parse(localStorage.getItem('warmer_texts'));
+        renderTexts();
+    }
+
+    // Socket Events
+    socket.on('qr', (data) => {
+        qrContainer.innerHTML = `
+            <p style="color: #80ff80; margin-bottom: 12px;">📸 Scan QR Code with WhatsApp</p>
+            <img src="${data.qr}" alt="QR Code" style="max-width: 200px; border-radius: 20px;">
+            <p style="color: #8bc48b; font-size: 0.7rem; margin-top: 12px;">Waiting for connection...</p>
+        `;
+    });
+
+    socket.on('ready', () => {
+        isConnected = true;
+        connectionStatus.className = 'status-badge status-connected';
+        connectionStatus.innerHTML = '✅ Connected';
+        connectBtn.style.display = 'none';
+        disconnectBtn.style.display = 'block';
+        qrContainer.innerHTML = '<p style="color: #80ff80;">✅ WhatsApp Connected! Ready to warm.</p>';
+    });
+
+    socket.on('authenticated', () => {
+        console.log('Authenticated');
+    });
+
+    socket.on('disconnected', () => {
+        isConnected = false;
+        isWarming = false;
+        connectionStatus.className = 'status-badge status-disconnected';
+        connectionStatus.innerHTML = '❌ Disconnected';
+        connectBtn.style.display = 'block';
+        disconnectBtn.style.display = 'none';
+        startBtn.style.display = 'block';
+        stopBtn.style.display = 'none';
+        qrContainer.innerHTML = '<button id="connectBtn" class="neon-btn" style="margin-top: 10px;">🔌 CONNECT WHATSAPP</button>';
+        document.getElementById('connectBtn')?.addEventListener('click', () => {
+            socket.emit('connect-wa', { sessionId });
+        });
+    });
+
+    socket.on('stats-update', (data) => {
+        totalSentSpan.innerText = data.totalSent;
+        const historyItem = document.createElement('div');
+        historyItem.className = 'history-item';
+        historyItem.innerHTML = `📤 ${new Date(data.lastMessage.time).toLocaleTimeString()} - To: ${data.lastMessage.contact} - "${data.lastMessage.message.substring(0, 40)}..."`;
+        historyLog.insertBefore(historyItem, historyLog.firstChild);
+        if (historyLog.children.length > 20) {
+            historyLog.removeChild(historyLog.lastChild);
+        }
+    });
+
+    socket.on('warming-started', () => {
+        isWarming = true;
+        startBtn.style.display = 'none';
+        stopBtn.style.display = 'block';
+    });
+
+    socket.on('warming-completed', (data) => {
+        isWarming = false;
+        startBtn.style.display = 'block';
+        stopBtn.style.display = 'none';
+        alert(`✅ Warming completed! Total messages sent: ${data.totalSent}`);
+    });
+
+    socket.on('error', (data) => {
+        alert('Error: ' + data.message);
+    });
+
+    // Connect button
+    connectBtn.addEventListener('click', () => {
+        socket.emit('connect-wa', { sessionId });
+        qrContainer.innerHTML = '<p style="color: #ffcc60;">⏳ Generating QR Code...</p>';
+    });
+
+    disconnectBtn.addEventListener('click', () => {
+        socket.emit('disconnect-wa', { sessionId });
+    });
+
+    // Contacts management
+    addContactBtn.addEventListener('click', () => {
+        const contact = contactInput.value.trim();
+        if (contact && !contacts.includes(contact)) {
+            contacts.push(contact);
+            renderContacts();
+            contactInput.value = '';
+            localStorage.setItem('warmer_contacts', JSON.stringify(contacts));
+        }
+    });
+
+    function renderContacts() {
+        if (contacts.length === 0) {
+            contactList.innerHTML = '<div style="color: #6a9a6a; text-align: center; padding: 20px;">No contacts added yet</div>';
+            return;
+        }
+        contactList.innerHTML = contacts.map((contact, idx) => `
+            <div class="contact-item">
+                <span>📞 ${contact}</span>
+                <button class="remove-text" onclick="removeContact(${idx})">Remove</button>
+            </div>
+        `).join('');
+    }
+
+    window.removeContact = (idx) => {
+        contacts.splice(idx, 1);
+        renderContacts();
+        localStorage.setItem('warmer_contacts', JSON.stringify(contacts));
+    };
+
+    // Texts management
+    addTextBtn.addEventListener('click', () => {
+        const text = textInput.value.trim();
+        if (text) {
+            texts.push(text);
+            renderTexts();
+            textInput.value = '';
+            localStorage.setItem('warmer_texts', JSON.stringify(texts));
+        }
+    });
+
+    function renderTexts() {
+        if (texts.length === 0) {
+            textList.innerHTML = '<div style="color: #6a9a6a; text-align: center; padding: 20px;">No messages added yet</div>';
+            return;
+        }
+        textList.innerHTML = texts.map((text, idx) => `
+            <div class="text-item">
+                <span>💬 ${text.substring(0, 60)}${text.length > 60 ? '...' : ''}</span>
+                <button class="remove-text" onclick="removeText(${idx})">Remove</button>
+            </div>
+        `).join('');
+    }
+
+    window.removeText = (idx) => {
+        texts.splice(idx, 1);
+        renderTexts();
+        localStorage.setItem('warmer_texts', JSON.stringify(texts));
+    };
+
+    // Start warming
+    startBtn.addEventListener('click', () => {
+        if (!isConnected) {
+            alert('Please connect WhatsApp first!');
+            return;
+        }
+        if (contacts.length === 0) {
+            alert('Please add at least one contact!');
+            return;
+        }
+        if (texts.length === 0) {
+            alert('Please add at least one message!');
+            return;
+        }
+        
+        socket.emit('start-warming', {
+            sessionId,
+            contacts: contacts,
+            texts: texts,
+            delayMin: parseInt(delayMin.value),
+            delayMax: parseInt(delayMax.value),
+            mode: sendMode.value
+        });
+    });
+
+    stopBtn.addEventListener('click', () => {
+        isWarming = false;
+        startBtn.style.display = 'block';
+        stopBtn.style.display = 'none';
+        alert('Warming stopped manually');
+    });
+</script>
+</body>
+</html>

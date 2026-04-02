@@ -1,0 +1,19 @@
+{
+  "name": "whatsapp-warmer",
+  "version": "2.0.0",
+  "description": "WhatsApp Warmer - Multi Device, Smart Text Rotation, Auto Send",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "4.18.2",
+    "socket.io": "4.6.1",
+    "qrcode": "1.5.3",
+    "whatsapp-web.js": "1.23.0",
+    "cors": "2.8.5"
+  },
+  "engines": {
+    "node": "18.x"
+  }
+}
